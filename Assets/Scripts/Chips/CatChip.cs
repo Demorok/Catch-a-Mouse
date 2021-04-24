@@ -7,7 +7,13 @@ public class CatChip : Chip
 {
     public override void Move(Vector3 target, int[] index)
     {
-        base.Move(target, index);
+        Move(target, index, typeof(MouseChip));
+    }
+
+    protected void Move(Vector3 target, int[] index, Type type)
+    {
+        StartCoroutine(MoveTo(target, timeToMove, () => Search(type)));
+        Set_Index(index);
     }
 
     protected IEnumerator MoveTo(Vector3 target, float time, Action onComplete)
@@ -16,8 +22,8 @@ public class CatChip : Chip
         onComplete();
     }
 
-    void Search_For_Mice()
+    protected void Search(Type type)
     {
-
+        PlayField.queue.Enqueue(new QueueItem(index, type));
     }
 }

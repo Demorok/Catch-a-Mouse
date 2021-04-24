@@ -7,7 +7,7 @@ public class Chip : MonoBehaviour
     protected static bool chipMoving = false;
     protected int[] index;
 
-    protected const float EPS = 0.001f;
+    const float EPS = 0.001f;
 
     public virtual void Move(Vector3 target, int[] index)
     {
@@ -36,6 +36,6 @@ public class Chip : MonoBehaviour
     private void OnMouseDown()
     {
         if (!chipMoving && Input.GetMouseButtonDown(0))
-            PlayField.moveQueue.Enqueue(index);
+            PlayField.queue.Enqueue(new QueueItem(index, null));
     }
 }
