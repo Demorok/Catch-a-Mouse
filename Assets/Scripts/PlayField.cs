@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -36,13 +35,7 @@ public class PlayField : MonoBehaviour
     void Check_Queue(Queue<QueueItem> queue)
     {
         while(queue.Count > 0)
-        {
-            QueueItem item = queue.Dequeue();
-            if (item.searchObject == null)
-                Move_Chip(item.index);
-            else
-                Field_Event(item);
-        }
+            Field_Event(queue.Dequeue());
     }
 
     void Check_Win_Condition()
@@ -51,15 +44,12 @@ public class PlayField : MonoBehaviour
             Reload();
     }
 
-    void Move_Chip(int[] index)
+    void Move_Chip(QueueItem item, int[] targetIndex)
     {
-        int[] targetIndex = Look_Adjacent_Places(index, null);
-        if (targetIndex == null)
-            return;
-        chips[index[0], index[1]].Move(chipPositions[targetIndex[0], targetIndex[1]], targetIndex);
+        chips[item.index[0], item.index[1]].Move(chipPositions[targetIndex[0], targetIndex[1]], targetIndex);
 
-        chips[targetIndex[0], targetIndex[1]] = chips[index[0], index[1]]; //swap
-        chips[index[0], index[1]] = null;
+        chips[targetIndex[0], targetIndex[1]] = chips[item.index[0], item.index[1]]; //swap
+        chips[item.index[0], item.index[1]] = null;
     }
 
     void Field_Event(QueueItem item)
@@ -67,9 +57,12 @@ public class PlayField : MonoBehaviour
         int[] targetIndex = Look_Adjacent_Places(item);
         if (targetIndex == null)
             return;
-        if (chips[item.index[0], item.index[1]].GetType() != typeof(HoleChip))
+
+        if (item.searchObject == null)
+            Move_Chip(item, targetIndex);
+        else if (chips[item.index[0], item.index[1]].GetType() != typeof(HoleChip)) //mouse is caught
             Reload();
-        else
+        else //mouse adjacent to hole
         {
             miceInHole += 1;
             Transform_Chip<Chip>(targetIndex, GlobalVariables.CHIPPREFAB);
@@ -82,25 +75,25 @@ public class PlayField : MonoBehaviour
         Destroy(gameObject.transform.parent.gameObject);
     }
 
-    int[] Look_Adjacent_Places(int[] index, Type type)
+    int[] Look_Adjacent_Places(QueueItem item)
     {
         int[][] adjacent_places = new int[][]
         {
-            new int[] {index[0], index[1] + 1},
-            new int[] {index[0], index[1] - 1},
-            new int[] {index[0] + 1, index[1]},
-            new int[] {index[0] - 1, index[1]},
+            new int[] { item.index[0], item.index[1] + 1},
+            new int[] { item.index[0], item.index[1] - 1},
+            new int[] { item.index[0] + 1, item.index[1]},
+            new int[] { item.index[0] - 1, item.index[1]},
         };
         foreach(int[] place in adjacent_places)
         {
             try
             {
-                if (chips[place[0], place[1]].GetType() == type)
+                if (chips[place[0], place[1]].GetType() == item.searchObject)
                     return place;
             }
             catch (NullReferenceException)
             {
-                if (type == null)
+                if (item.searchObject == null)
                     return place;
             }
             catch (IndexOutOfRangeException)
@@ -109,11 +102,6 @@ public class PlayField : MonoBehaviour
             }
         }
         return null;
-    }
-
-    int[] Look_Adjacent_Places(QueueItem item)
-    {
-        return Look_Adjacent_Places(item.index, item.searchObject);
     }
 
     void Transform_Chip<T>(int[] index, GameObject prefab) where T : Chip
@@ -158,7 +146,7 @@ public class PlayField : MonoBehaviour
             for(int j = 0; j < width; j++)
             {
 
-                //fill positions
+                //fill chips positions
                 if (i == 0 && j == 0)
                     chipPositions[i, j] = new Vector3(-fieldFrame.bounds.extents.x, fieldFrame.bounds.extents.y, fieldFrame.bounds.extents.z);
                 else if (j == 0 || (i == height - 1 && j == width - 1))
@@ -170,7 +158,7 @@ public class PlayField : MonoBehaviour
                 {
                     coll = chips[i, j - 1].GetComponent<Collider2D>();
                     chipPositions[i, j] = coll.bounds.max;
-                    if (i == empty[0] && j == empty[1])
+                    if (i == empty[0] && j == empty[1]) //no chip here
                         continue;
                 }
 
@@ -187,12 +175,12 @@ public class PlayField : MonoBehaviour
                     chips[i, j] = clone.GetComponent<CatChip>();
                     catSpawn.RemoveAt(0);
                 }
-                else if (i == center[0] && j == center[1])
+                else if (i == center[0] && j == center[1]) //HoleChip
                 {
                     clone = Instantiate(GlobalVariables.HOLECHIPPREFAB, chipPositions[i, j], Quaternion.identity, transform.parent);
                     chips[i, j] = clone.GetComponent<HoleChip>();
                 }
-                else
+                else //Chip
                 {
                     clone = Instantiate(GlobalVariables.CHIPPREFAB, chipPositions[i, j], Quaternion.identity, transform.parent);
                     chips[i, j] = clone.GetComponent<Chip>();
